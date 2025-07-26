@@ -35,7 +35,8 @@ def setup_helper_commands(bot: commands.Bot) -> None:
     async def stats(interaction: discord.Interaction) -> None:
         if not check_user_exists(interaction.user.id):
             await interaction.response.send_message(
-                "You don't have an account (somehow), use `/init` to initialize your account"
+                "You don't have an account (somehow), use `/init` to initialize your account",
+                ephemeral=True,
             )
             return
 
@@ -47,5 +48,6 @@ def setup_helper_commands(bot: commands.Bot) -> None:
             f"Lifttime losses: {user_data.lifttime_losses}\n"
             f"Lifttime wins: {user_data.lifttime_wins}\n"
             f"Lifttime profit: {user_data.lifttime_profit}\n"
-            f"Lifttime profit percentage: {user_data.lifttime_profit / user_data.money * 100}%"
+            f"Lifttime profit percentage: {user_data.lifttime_profit / user_data.money * 100}%",
+            ephemeral=True,
         )

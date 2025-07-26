@@ -34,7 +34,7 @@ async def on_member_join(member: discord.Member) -> None:
 async def on_ready() -> None:
     print(f"{bot.user} has connected to Discord!")
 
-    create_main_table()
+    create_tables()
 
     # Setup helper commands
     setup_helper_commands(bot)

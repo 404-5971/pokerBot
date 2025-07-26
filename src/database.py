@@ -19,6 +19,11 @@ class UserData:
         self.lifttime_profit = lifttime_profit
 
 
+def create_tables() -> None:
+    create_main_table()
+    create_tables_table()
+
+
 def create_main_table() -> None:
     with sqlite3.connect(DATABASE_PATH) as conn:
         cursor: sqlite3.Cursor = conn.cursor()
@@ -33,6 +38,53 @@ def create_main_table() -> None:
             lifttime_profit INTEGER NOT NULL DEFAULT 0
         )"""
         )
+
+
+def create_tables_table() -> None:
+    with sqlite3.connect(DATABASE_PATH) as conn:
+        cursor: sqlite3.Cursor = conn.cursor()
+
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS tables (
+                table_id INTEGER NOT NULL PRIMARY KEY,
+                table_owner_id INTEGER NOT NULL,
+                temp_money BOOLEAN NOT NULL DEFAULT FALSE,
+                table_name TEXT NOT NULL,
+                min_bet INTEGER NOT NULL DEFAULT 5,
+                max_bet INTEGER NOT NULL DEFAULT 0
+            )"""
+        )
+
+
+def add_table(
+    table_id: int,
+    table_owner_id: int,
+    table_name: str,
+    temp_money: bool,
+    min_bet: int,
+    max_bet: int,
+) -> None:
+    with sqlite3.connect(DATABASE_PATH) as conn:
+        cursor: sqlite3.Cursor = conn.cursor()
+
+        cursor.execute(
+            "INSERT INTO tables (table_id, table_owner_id, table_name, temp_money, min_bet, max_bet) VALUES (?, ?, ?, ?, ?, ?)",
+            (table_id, table_owner_id, table_name, temp_money, min_bet, max_bet),
+        )
+        conn.commit()
+
+
+def channel_is_table(channel_id: int) -> bool:
+    """
+    - Takes a discord channel id.
+    - Check if a channel is a table.
+    - Returns True if the channel is a table, False otherwise.
+    """
+    with sqlite3.connect(DATABASE_PATH) as conn:
+        cursor: sqlite3.Cursor = conn.cursor()
+        cursor.execute("SELECT * FROM tables WHERE table_id = ?", (channel_id,))
+        return cursor.fetchone() is not None
 
 
 def check_user_exists(user_id: int) -> bool:
@@ -72,3 +124,14 @@ def get_user_data(user_id: int) -> UserData:
             lifttime_wins=data[3],
             lifttime_profit=data[4],
         )
+
+
+def add_user_to_table(user_id: int, table_id: int) -> None:
+    """
+    Add a user to a poker table.
+    This function would typically manage table participants.
+    For now, it's a placeholder that can be expanded later.
+    """
+    # TODO: Implement table participants management
+    # This could involve creating a new table or updating existing table data
+    pass

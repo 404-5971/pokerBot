@@ -1,6 +1,8 @@
 import discord
 from discord.ext import commands
 
+from database import add_table, add_user_to_table, channel_is_table
+
 
 def setup_poker_commands(bot: commands.Bot) -> None:
     """Setup all poker commands for the bot"""
@@ -14,13 +16,17 @@ def setup_poker_commands(bot: commands.Bot) -> None:
         max_bet: int = 0,
         table_name: str = "",
     ) -> None:
+        discord_user: discord.User | discord.Member = interaction.user
+        discord_user_id: int = discord_user.id
+        discord_user_name: str = discord_user.name
+
         # In case of no max bet
         if max_bet == 0:
             max_bet *= 100
 
         # In case of no table name
         if table_name == "":
-            table_name = f"{interaction.user.name}'s Table"
+            table_name = f"{discord_user_name}'s Table"
 
         # Check if the channel supports creating threads
         if not isinstance(
@@ -38,9 +44,10 @@ def setup_poker_commands(bot: commands.Bot) -> None:
             )
 
             # Create thread with the table name
+            # TODO: Clean up tables manually so that we can remove them from the database
             if isinstance(interaction.channel, discord.TextChannel):
                 thread = await interaction.channel.create_thread(
-                    name=table_name, auto_archive_duration=60
+                    name=table_name
                 )
             else:
                 await interaction.followup.send("❌ Unsupported channel type!")
@@ -52,7 +59,16 @@ def setup_poker_commands(bot: commands.Bot) -> None:
                 f"💸 Temp money: {temp_money}\n"
                 f"💰 Min bet: {min_bet}\n"
                 f"💎 Max bet: {max_bet}\n"
-                f"👤 Created by: {interaction.user.mention}"
+                f"👤 Created by: {discord_user.mention}"
+            )
+
+            add_table(
+                thread.id,
+                discord_user_id,
+                table_name,
+                temp_money,
+                min_bet,
+                max_bet,
             )
 
         except discord.Forbidden:
@@ -64,6 +80,27 @@ def setup_poker_commands(bot: commands.Bot) -> None:
 
     @bot.tree.command(name="join", description="Join's the current table")
     async def join(interaction: discord.Interaction) -> None:
+        if interaction.channel is None:
+            await interaction.response.send_message(
+                "This command can only be used in a text channel with a table!"
+            )
+            return
+
+        channel_id: int = interaction.channel.id
+        if not channel_is_table(channel_id):
+            await interaction.response.send_message(
+                "This channel is not a table! Use `/create` to create a table."
+            )
+            return
+
+        # Add the user to the table
+        add_user_to_table(interaction.user.id, channel_id)
+        await interaction.response.send_message(
+            f"{interaction.user.name} joined the table!"
+        )
+
+    @bot.tree.command(name="list", description="List's everyone in the current table")
+    async def list(interaction: discord.Interaction) -> None:
         pass
 
     @bot.tree.command(name="leave", description="Leave's the current table")
@@ -73,10 +110,6 @@ def setup_poker_commands(bot: commands.Bot) -> None:
     @bot.tree.command(name="start", description="Start's the current table")
     async def start(interaction: discord.Interaction) -> None:
         pass
-
-
-
-
 
     # Actions
     @bot.tree.command(name="check", description="Check's the current table")
