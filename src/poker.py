@@ -1,7 +1,8 @@
 import discord
 from discord.ext import commands
 
-from database import add_table, add_user_to_table, channel_is_table
+from database import (add_table, add_user_to_table, channel_is_table,
+                      delete_table, user_is_owner_of_table)
 
 
 def setup_poker_commands(bot: commands.Bot) -> None:
@@ -18,7 +19,7 @@ def setup_poker_commands(bot: commands.Bot) -> None:
     ) -> None:
         discord_user: discord.User | discord.Member = interaction.user
         discord_user_id: int = discord_user.id
-        discord_user_name: str = discord_user.name
+        discord_user_name: str = discord_user.display_name
 
         # In case of no max bet
         if max_bet == 0:
@@ -33,7 +34,7 @@ def setup_poker_commands(bot: commands.Bot) -> None:
             interaction.channel, (discord.TextChannel, discord.ForumChannel)
         ):
             await interaction.response.send_message(
-                "This command can only be used in text channels or forum channels!"
+                "This command can only be used in text channels or forum channels! NOT TABLES!"
             )
             return
 
@@ -47,7 +48,8 @@ def setup_poker_commands(bot: commands.Bot) -> None:
             # TODO: Clean up tables manually so that we can remove them from the database
             if isinstance(interaction.channel, discord.TextChannel):
                 thread = await interaction.channel.create_thread(
-                    name=table_name
+                    name=table_name,
+                    type=discord.ChannelType.public_thread,
                 )
             else:
                 await interaction.followup.send("❌ Unsupported channel type!")
@@ -96,8 +98,41 @@ def setup_poker_commands(bot: commands.Bot) -> None:
         # Add the user to the table
         add_user_to_table(interaction.user.id, channel_id)
         await interaction.response.send_message(
-            f"{interaction.user.name} joined the table!"
+            f"{interaction.user.display_name} joined the table!"
         )
+
+    @bot.tree.command(name="delete", description="Deletes the current table")
+    async def delete(interaction: discord.Interaction) -> None:
+        if interaction.channel is None:
+            await interaction.response.send_message(
+                "This command can only be used in a text channel with a table!"
+            )
+            return
+
+        channel_id: int = interaction.channel.id
+        if not channel_is_table(channel_id):
+            await interaction.response.send_message(
+                "This channel is not a table! Use `/create` to create a table."
+            )
+            return
+
+        if not user_is_owner_of_table(interaction.user.id, channel_id):
+            await interaction.response.send_message(
+                "You are not the owner of this table! Use `/create` to create a table."
+            )
+            return
+        # This check is useless because the channel_is_table function checks if the channel is a table
+        # and all tables are threads, but it makes mypy happy, because else it might not have the .delete() method
+        if not isinstance(interaction.channel, discord.Thread):
+            await interaction.response.send_message(
+                "This command can only be used in a thread with a table!"
+            )
+            return
+
+        # Delete the table
+        delete_table(channel_id)
+        await interaction.response.send_message("Deleting table...", ephemeral=True)
+        await interaction.channel.delete()
 
     @bot.tree.command(name="list", description="List's everyone in the current table")
     async def list(interaction: discord.Interaction) -> None:

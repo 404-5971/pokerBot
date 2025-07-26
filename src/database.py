@@ -75,6 +75,13 @@ def add_table(
         conn.commit()
 
 
+def delete_table(table_id: int) -> None:
+    with sqlite3.connect(DATABASE_PATH) as conn:
+        cursor: sqlite3.Cursor = conn.cursor()
+        cursor.execute("DELETE FROM tables WHERE table_id = ?", (table_id,))
+        conn.commit()
+
+
 def channel_is_table(channel_id: int) -> bool:
     """
     - Takes a discord channel id.
@@ -84,6 +91,21 @@ def channel_is_table(channel_id: int) -> bool:
     with sqlite3.connect(DATABASE_PATH) as conn:
         cursor: sqlite3.Cursor = conn.cursor()
         cursor.execute("SELECT * FROM tables WHERE table_id = ?", (channel_id,))
+        return cursor.fetchone() is not None
+
+
+def user_is_owner_of_table(user_id: int, table_id: int) -> bool:
+    """
+    - Takes a discord.User user id and a discord.Thread.id table id.
+    - Check if a user is the owner of a table.
+    - Returns True if the user is the owner of the table, False otherwise.
+    """
+    with sqlite3.connect(DATABASE_PATH) as conn:
+        cursor: sqlite3.Cursor = conn.cursor()
+        cursor.execute(
+            "SELECT * FROM tables WHERE table_id = ? AND table_owner_id = ?",
+            (table_id, user_id),
+        )
         return cursor.fetchone() is not None
 
 
