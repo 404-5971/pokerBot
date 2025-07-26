@@ -2,8 +2,8 @@ import discord
 from discord.ext import commands
 
 from database import (add_table, add_user_to_table, channel_is_table,
-                      delete_table, get_table_name, user_is_in_table,
-                      user_is_owner_of_table)
+                      delete_table, get_table_name, remove_user_from_table,
+                      user_is_in_table, user_is_owner_of_table)
 
 
 def setup_poker_commands(bot: commands.Bot) -> None:
@@ -74,6 +74,8 @@ def setup_poker_commands(bot: commands.Bot) -> None:
                 max_bet,
             )
 
+            add_user_to_table(discord_user_id, thread.id)
+
         except discord.Forbidden:
             await interaction.followup.send(
                 "❌ I don't have permission to create threads in this channel!"
@@ -122,13 +124,16 @@ def setup_poker_commands(bot: commands.Bot) -> None:
             return
 
         channel_id: int = interaction.channel.id
+        discord_user: discord.User | discord.Member = interaction.user
+        discord_user_id: int = discord_user.id
+
         if not channel_is_table(channel_id):
             await interaction.response.send_message(
                 "This channel is not a table! Use `/create` to create a table."
             )
             return
 
-        if not user_is_owner_of_table(interaction.user.id, channel_id):
+        if not user_is_owner_of_table(discord_user_id, channel_id):
             await interaction.response.send_message(
                 "You are not the owner of this table! Use `/create` to create a table."
             )
@@ -143,6 +148,7 @@ def setup_poker_commands(bot: commands.Bot) -> None:
 
         # Delete the table
         delete_table(channel_id)
+        remove_user_from_table(discord_user_id)
         await interaction.response.send_message("Deleting table...", ephemeral=True)
         await interaction.channel.delete()
 

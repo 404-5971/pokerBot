@@ -1,4 +1,5 @@
 import sqlite3
+from typing import Optional
 
 from constants import DATABASE_PATH
 
@@ -184,10 +185,20 @@ def add_user_to_table(user_id: int, table_id: int) -> None:
     with sqlite3.connect(DATABASE_PATH) as conn:
         cursor: sqlite3.Cursor = conn.cursor()
         cursor.execute("SELECT table_name FROM tables WHERE table_id = ?", (table_id,))
-        table_name_row = cursor.fetchone()
-        table_name = table_name_row[0] if table_name_row else ""
+        table_name_row: Optional[tuple[str, ...]] = cursor.fetchone()
+        table_name: str = table_name_row[0] if table_name_row else ""
         cursor.execute(
             "UPDATE users SET joined_table = ?, joined_table_name = ? WHERE user_id = ?",
             (table_id, table_name, user_id),
+        )
+        conn.commit()
+
+
+def remove_user_from_table(user_id: int) -> None:
+    with sqlite3.connect(DATABASE_PATH) as conn:
+        cursor: sqlite3.Cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE users SET joined_table = 0, joined_table_name = '' WHERE user_id = ?",
+            (user_id,),
         )
         conn.commit()
