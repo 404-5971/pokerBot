@@ -4,26 +4,7 @@ from typing import Optional
 from constants import DATABASE_PATH
 
 
-class UserData:
-    def __init__(
-        self,
-        user_id: int,
-        money: int,
-        lifttime_losses: int,
-        lifttime_wins: int,
-        lifttime_profit: int,
-        joined_table: int,
-        joined_table_name: str,
-    ):
-        self.user_id = user_id
-        self.money = money
-        self.lifttime_losses = lifttime_losses
-        self.lifttime_wins = lifttime_wins
-        self.lifttime_profit = lifttime_profit
-        self.joined_table = joined_table
-        self.joined_table_name = joined_table_name
-
-
+# Tables below
 def create_tables() -> None:
     create_main_table()
     create_tables_table()
@@ -101,6 +82,36 @@ def channel_is_table(channel_id: int) -> bool:
         return cursor.fetchone() is not None
 
 
+def get_table_name(user_id: int) -> str:
+    with sqlite3.connect(DATABASE_PATH) as conn:
+        cursor: sqlite3.Cursor = conn.cursor()
+        cursor.execute(
+            "SELECT joined_table_name FROM users WHERE user_id = ?", (user_id,)
+        )
+        return cursor.fetchone()[0]
+
+
+# User Stuff below
+class UserData:
+    def __init__(
+        self,
+        user_id: int,
+        money: int,
+        lifttime_losses: int,
+        lifttime_wins: int,
+        lifttime_profit: int,
+        joined_table: int,
+        joined_table_name: str,
+    ):
+        self.user_id = user_id
+        self.money = money
+        self.lifttime_losses = lifttime_losses
+        self.lifttime_wins = lifttime_wins
+        self.lifttime_profit = lifttime_profit
+        self.joined_table = joined_table
+        self.joined_table_name = joined_table_name
+
+
 def user_is_owner_of_table(user_id: int, table_id: int) -> bool:
     """
     - Takes a discord.User user id and a discord.Thread.id table id.
@@ -155,15 +166,6 @@ def get_user_data(user_id: int) -> UserData:
             joined_table=data[5],
             joined_table_name=data[6],
         )
-
-
-def get_table_name(user_id: int) -> str:
-    with sqlite3.connect(DATABASE_PATH) as conn:
-        cursor: sqlite3.Cursor = conn.cursor()
-        cursor.execute(
-            "SELECT joined_table_name FROM users WHERE user_id = ?", (user_id,)
-        )
-        return cursor.fetchone()[0]
 
 
 def user_is_in_table(user_id: int) -> bool:
