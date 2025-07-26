@@ -5,8 +5,9 @@ from discord.ext import commands
 def setup_poker_commands(bot: commands.Bot) -> None:
     """Setup all poker commands for the bot"""
 
-    @bot.tree.command(name="create-table", description="Create a poker table")
-    async def create_table(
+    # Table management
+    @bot.tree.command(name="create", description="Create a poker table")
+    async def create(
         interaction: discord.Interaction,
         temp_money: bool = False,
         min_bet: int = 5,
@@ -60,3 +61,40 @@ def setup_poker_commands(bot: commands.Bot) -> None:
             )
         except Exception as e:
             await interaction.followup.send(f"❌ Failed to create table: {str(e)}")
+
+    @bot.tree.command(name="join", description="Join's the current table")
+    async def join(interaction: discord.Interaction) -> None:
+        pass
+
+    @bot.tree.command(name="leave", description="Leave's the current table")
+    async def leave(interaction: discord.Interaction) -> None:
+        pass
+
+    @bot.tree.command(name="start", description="Start's the current table")
+    async def start(interaction: discord.Interaction) -> None:
+        pass
+
+
+
+
+
+    # Actions
+    @bot.tree.command(name="check", description="Check's the current table")
+    async def check(interaction: discord.Interaction) -> None:
+        pass
+
+    @bot.tree.command(name="call", description="Call's the current table")
+    async def call(interaction: discord.Interaction) -> None:
+        pass
+
+    @bot.tree.command(name="raise", description="Raise's the current table")
+    async def raise_command(interaction: discord.Interaction, amount: int) -> None:
+        pass
+
+    @bot.tree.command(name="fold", description="Fold's the current table")
+    async def fold(interaction: discord.Interaction) -> None:
+        pass
+
+    @bot.tree.command(name="all-in", description="All-in's the current table")
+    async def all_in(interaction: discord.Interaction) -> None:
+        pass
