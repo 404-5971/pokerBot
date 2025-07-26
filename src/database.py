@@ -11,12 +11,16 @@ class UserData:
         lifttime_losses: int,
         lifttime_wins: int,
         lifttime_profit: int,
+        joined_table: int,
+        joined_table_name: str,
     ):
         self.user_id = user_id
         self.money = money
         self.lifttime_losses = lifttime_losses
         self.lifttime_wins = lifttime_wins
         self.lifttime_profit = lifttime_profit
+        self.joined_table = joined_table
+        self.joined_table_name = joined_table_name
 
 
 def create_tables() -> None:
@@ -30,12 +34,14 @@ def create_main_table() -> None:
 
         cursor.execute(
             """
-        CREATE TABLE IF NOT EXISTS main (
+        CREATE TABLE IF NOT EXISTS users (
             user_id INTEGER NOT NULL PRIMARY KEY,
             money INTEGER NOT NULL DEFAULT 1000,
             lifttime_losses INTEGER NOT NULL DEFAULT 0,
             lifttime_wins INTEGER NOT NULL DEFAULT 0,
-            lifttime_profit INTEGER NOT NULL DEFAULT 0
+            lifttime_profit INTEGER NOT NULL DEFAULT 0,
+            joined_table INTEGER NOT NULL DEFAULT 0,
+            joined_table_name TEXT NOT NULL DEFAULT ""
         )"""
         )
 
@@ -117,7 +123,7 @@ def check_user_exists(user_id: int) -> bool:
     with sqlite3.connect(DATABASE_PATH) as conn:
         cursor: sqlite3.Cursor = conn.cursor()
 
-        cursor.execute("SELECT * FROM main WHERE user_id = ?", (user_id,))
+        cursor.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
         return cursor.fetchone() is not None
 
 
@@ -127,8 +133,8 @@ def add_user(user_id: int, money: int = 1000) -> None:
             cursor: sqlite3.Cursor = conn.cursor()
 
             cursor.execute(
-                "INSERT INTO main (user_id, money, lifttime_losses, lifttime_wins, lifttime_profit) VALUES (?, ?, ?, ?, ?)",
-                (user_id, money, 0, 0, 0),
+                "INSERT INTO users (user_id, money, lifttime_losses, lifttime_wins, lifttime_profit, joined_table) VALUES (?, ?, ?, ?, ?, ?)",
+                (user_id, money, 0, 0, 0, 0),
             )
             conn.commit()
 
@@ -137,23 +143,51 @@ def get_user_data(user_id: int) -> UserData:
     with sqlite3.connect(DATABASE_PATH) as conn:
         cursor: sqlite3.Cursor = conn.cursor()
 
-        cursor.execute("SELECT * FROM main WHERE user_id = ?", (user_id,))
-        data: tuple[int, int, int, int, int] = cursor.fetchone()
+        cursor.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
+        data: tuple[int, int, int, int, int, int, str] = cursor.fetchone()
         return UserData(
             user_id=data[0],
             money=data[1],
             lifttime_losses=data[2],
             lifttime_wins=data[3],
             lifttime_profit=data[4],
+            joined_table=data[5],
+            joined_table_name=data[6],
         )
+
+
+def get_table_name(user_id: int) -> str:
+    with sqlite3.connect(DATABASE_PATH) as conn:
+        cursor: sqlite3.Cursor = conn.cursor()
+        cursor.execute(
+            "SELECT joined_table_name FROM users WHERE user_id = ?", (user_id,)
+        )
+        return cursor.fetchone()[0]
+
+
+def user_is_in_table(user_id: int) -> bool:
+    with sqlite3.connect(DATABASE_PATH) as conn:
+        cursor: sqlite3.Cursor = conn.cursor()
+        cursor.execute(
+            "SELECT * FROM users WHERE user_id = ? AND joined_table != 0",
+            (user_id,),
+        )
+        return cursor.fetchone() is not None
 
 
 def add_user_to_table(user_id: int, table_id: int) -> None:
     """
-    Add a user to a poker table.
-    This function would typically manage table participants.
-    For now, it's a placeholder that can be expanded later.
+    - Takes a discord.User user id and a discord.Thread.id table id.
+    - Add a user to a table.
+    - Returns True if the user is added to the table, False otherwise.
     """
-    # TODO: Implement table participants management
-    # This could involve creating a new table or updating existing table data
-    pass
+    with sqlite3.connect(DATABASE_PATH) as conn:
+        cursor: sqlite3.Cursor = conn.cursor()
+        cursor.execute("SELECT table_name FROM tables WHERE table_id = ?", (table_id,))
+        table_name_row = cursor.fetchone()
+        table_name = table_name_row[0] if table_name_row else ""
+        cursor.execute(
+            "UPDATE users SET joined_table = ?, joined_table_name = ? WHERE user_id = ?",
+            (table_id, table_name, user_id),
+        )
+        conn.commit()

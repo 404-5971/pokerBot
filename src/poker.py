@@ -2,7 +2,8 @@ import discord
 from discord.ext import commands
 
 from database import (add_table, add_user_to_table, channel_is_table,
-                      delete_table, user_is_owner_of_table)
+                      delete_table, get_table_name, user_is_in_table,
+                      user_is_owner_of_table)
 
 
 def setup_poker_commands(bot: commands.Bot) -> None:
@@ -89,16 +90,27 @@ def setup_poker_commands(bot: commands.Bot) -> None:
             return
 
         channel_id: int = interaction.channel.id
+        discord_user: discord.User | discord.Member = interaction.user
+        discord_user_id: int = discord_user.id
+
         if not channel_is_table(channel_id):
             await interaction.response.send_message(
                 "This channel is not a table! Use `/create` to create a table."
             )
             return
 
+        if user_is_in_table(discord_user_id):
+            table_name: str = get_table_name(discord_user_id)
+            await interaction.response.send_message(
+                f"You are already in a table, {table_name}!",
+                ephemeral=True,
+            )
+            return
+
         # Add the user to the table
-        add_user_to_table(interaction.user.id, channel_id)
+        add_user_to_table(discord_user_id, channel_id)
         await interaction.response.send_message(
-            f"{interaction.user.display_name} joined the table!"
+            f"{discord_user.display_name} joined the table!"
         )
 
     @bot.tree.command(name="delete", description="Deletes the current table")

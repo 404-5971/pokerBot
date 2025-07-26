@@ -1,1 +1,5 @@
 Make it so that tables delete them selves auto matically and remove them selves from the db
+
+if you delete the table that you are joined, you should no longer be joined to the table
+
+when you create a table you should automatically join it
