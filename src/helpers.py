@@ -40,7 +40,13 @@ def setup_helper_commands(bot: commands.Bot) -> None:
             )
             return
 
-        user_data: UserData = get_user_data(interaction.user.id)
+        user_data: Optional[UserData] = get_user_data(interaction.user.id)
+        if user_data is None:
+            await interaction.response.send_message(
+                "You don't exist in the database! Use `/init` to initialize your account.",
+                ephemeral=True,
+            )
+            return
 
         await interaction.response.send_message(
             f"Your stats:\n"

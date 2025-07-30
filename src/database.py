@@ -40,7 +40,8 @@ def create_tables_table() -> None:
                 temp_money BOOLEAN NOT NULL DEFAULT FALSE,
                 table_name TEXT NOT NULL,
                 min_bet INTEGER NOT NULL DEFAULT 5,
-                max_bet INTEGER NOT NULL DEFAULT 0
+                max_bet INTEGER NOT NULL DEFAULT 0,
+                last_message_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
             )"""
         )
 
@@ -70,6 +71,38 @@ def delete_table(table_id: int) -> None:
         conn.commit()
 
 
+def get_expired_tables(mintues: int = 5) -> list[int]:
+    """
+    Get list of table IDs that have expired (older than specified hours since last message)
+    """
+    with sqlite3.connect(DATABASE_PATH) as conn:
+        cursor: sqlite3.Cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT table_id FROM tables 
+            WHERE datetime(last_message_at) < datetime('now', '-{} minutes')
+            """.format(
+                mintues
+            )
+        )
+        table_ids: list[int] = [row[0] for row in cursor.fetchall()]
+        print(f"Expired tables: {table_ids}")
+        return table_ids
+
+
+def remove_all_users_from_table(table_id: int) -> None:
+    """
+    Remove all users from a specific table
+    """
+    with sqlite3.connect(DATABASE_PATH) as conn:
+        cursor: sqlite3.Cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE users SET joined_table = 0, joined_table_name = '' WHERE joined_table = ?",
+            (table_id,),
+        )
+        conn.commit()
+
+
 def channel_is_table(channel_id: int) -> bool:
     """
     - Takes a discord channel id.
@@ -89,6 +122,28 @@ def get_table_name(user_id: int) -> str:
             "SELECT joined_table_name FROM users WHERE user_id = ?", (user_id,)
         )
         return cursor.fetchone()[0]
+
+
+def update_table_last_message_time(table_id: int) -> None:
+    """Update the last message time for a table"""
+    with sqlite3.connect(DATABASE_PATH) as conn:
+        cursor: sqlite3.Cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE tables SET last_message_at = CURRENT_TIMESTAMP WHERE table_id = ?",
+            (table_id,),
+        )
+        conn.commit()
+
+
+def get_table_last_message_time(table_id: int) -> Optional[str]:
+    """Get the last message time of a table"""
+    with sqlite3.connect(DATABASE_PATH) as conn:
+        cursor: sqlite3.Cursor = conn.cursor()
+        cursor.execute(
+            "SELECT last_message_at FROM tables WHERE table_id = ?", (table_id,)
+        )
+        result: Optional[tuple[str, ...]] = cursor.fetchone()
+        return result[0] if result else None
 
 
 # User Stuff below
@@ -151,12 +206,15 @@ def add_user(user_id: int, money: int = 1000) -> None:
             conn.commit()
 
 
-def get_user_data(user_id: int) -> UserData:
+def get_user_data(user_id: int) -> Optional[UserData]:
     with sqlite3.connect(DATABASE_PATH) as conn:
         cursor: sqlite3.Cursor = conn.cursor()
 
         cursor.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
-        data: tuple[int, int, int, int, int, int, str] = cursor.fetchone()
+        data: Optional[tuple[int, int, int, int, int, int, str]] = cursor.fetchone()
+        if data is None:
+            return None
+
         return UserData(
             user_id=data[0],
             money=data[1],

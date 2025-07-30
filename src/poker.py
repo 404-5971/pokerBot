@@ -2,8 +2,9 @@ import discord
 from discord.ext import commands
 
 from database import (add_table, add_user_to_table, channel_is_table,
-                      delete_table, get_table_name, remove_user_from_table,
-                      user_is_in_table, user_is_owner_of_table)
+                      delete_table, get_table_name, get_user_data,
+                      remove_user_from_table, user_is_in_table,
+                      user_is_owner_of_table)
 
 
 def setup_poker_commands(bot: commands.Bot) -> None:
@@ -22,9 +23,16 @@ def setup_poker_commands(bot: commands.Bot) -> None:
         discord_user_id: int = discord_user.id
         discord_user_name: str = discord_user.display_name
 
+        # Check if the user exists in the database
+        if not get_user_data(discord_user_id):
+            await interaction.response.send_message(
+                "You don't exist in the database! Use `/init` to initialize your account."
+            )
+            return
+
         # In case of no max bet
         if max_bet == 0:
-            max_bet *= 100
+            max_bet = min_bet * 100
 
         # In case of no table name
         if table_name == "":
@@ -62,7 +70,8 @@ def setup_poker_commands(bot: commands.Bot) -> None:
                 f"💸 Temp money: {temp_money}\n"
                 f"💰 Min bet: {min_bet}\n"
                 f"💎 Max bet: {max_bet}\n"
-                f"👤 Created by: {discord_user.mention}"
+                f"👤 Created by: {discord_user.mention}\n"
+                f"⏰ **Auto-delete:** This table will be automatically deleted after 5 minutes of inactivity"
             )
 
             add_table(
@@ -129,13 +138,15 @@ def setup_poker_commands(bot: commands.Bot) -> None:
 
         if not channel_is_table(channel_id):
             await interaction.response.send_message(
-                "This channel is not a table! Use `/create` to create a table."
+                "This channel is not a table! Use `/create` to create a table.",
+                ephemeral=True,
             )
             return
 
         if not user_is_owner_of_table(discord_user_id, channel_id):
             await interaction.response.send_message(
-                "You are not the owner of this table! Use `/create` to create a table."
+                "You are not the owner of this table! Use `/create` to create a table.",
+                ephemeral=True,
             )
             return
         # This check is useless because the channel_is_table function checks if the channel is a table
@@ -184,3 +195,5 @@ def setup_poker_commands(bot: commands.Bot) -> None:
     @bot.tree.command(name="all-in", description="All-in's the current table")
     async def all_in(interaction: discord.Interaction) -> None:
         pass
+
+    pass

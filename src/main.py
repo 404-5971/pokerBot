@@ -7,8 +7,10 @@ from discord.ext import commands
 from dotenv import load_dotenv
 
 from database import *
+from database import channel_is_table, update_table_last_message_time
 from helpers import setup_helper_commands
 from poker import setup_poker_commands
+from timer import setup_table_timer
 
 load_dotenv()
 
@@ -40,6 +42,9 @@ async def on_ready() -> None:
     setup_helper_commands(bot)
     setup_poker_commands(bot)
 
+    # Setup table timer
+    setup_table_timer(bot)
+
     await bot.tree.sync()
 
     end_time: float = time.time()
@@ -47,6 +52,18 @@ async def on_ready() -> None:
     elapsed_time: float = end_time - start_time
 
     print("Time to start up", round(elapsed_time, 2), "seconds")
+
+
+@bot.event
+async def on_message(message: discord.Message) -> None:
+    # Only process messages in table threads
+    if isinstance(message.channel, discord.Thread) and channel_is_table(
+        message.channel.id
+    ):
+        update_table_last_message_time(message.channel.id)
+
+    # Let the bot process commands
+    await bot.process_commands(message)
 
 
 if __name__ == "__main__":
