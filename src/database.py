@@ -19,6 +19,7 @@ def create_main_table() -> None:
         CREATE TABLE IF NOT EXISTS users (
             user_id INTEGER NOT NULL PRIMARY KEY,
             money INTEGER NOT NULL DEFAULT 1000,
+            temp_money INTEGER NOT NULL DEFAULT 0,
             lifttime_losses INTEGER NOT NULL DEFAULT 0,
             lifttime_wins INTEGER NOT NULL DEFAULT 0,
             lifttime_profit INTEGER NOT NULL DEFAULT 0,
@@ -152,6 +153,7 @@ class UserData:
         self,
         user_id: int,
         money: int,
+        temp_money: int,
         lifttime_losses: int,
         lifttime_wins: int,
         lifttime_profit: int,
@@ -160,6 +162,7 @@ class UserData:
     ):
         self.user_id = user_id
         self.money = money
+        self.temp_money = temp_money
         self.lifttime_losses = lifttime_losses
         self.lifttime_wins = lifttime_wins
         self.lifttime_profit = lifttime_profit
@@ -200,8 +203,8 @@ def add_user(user_id: int, money: int = 1000) -> None:
             cursor: sqlite3.Cursor = conn.cursor()
 
             cursor.execute(
-                "INSERT INTO users (user_id, money, lifttime_losses, lifttime_wins, lifttime_profit, joined_table) VALUES (?, ?, ?, ?, ?, ?)",
-                (user_id, money, 0, 0, 0, 0),
+                "INSERT INTO users (user_id, money, temp_money, lifttime_losses, lifttime_wins, lifttime_profit, joined_table) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (user_id, money, 0, 0, 0, 0, 0),
             )
             conn.commit()
 
@@ -211,18 +214,21 @@ def get_user_data(user_id: int) -> Optional[UserData]:
         cursor: sqlite3.Cursor = conn.cursor()
 
         cursor.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
-        data: Optional[tuple[int, int, int, int, int, int, str]] = cursor.fetchone()
+        data: Optional[tuple[int, int, int, int, int, int, int, str]] = (
+            cursor.fetchone()
+        )
         if data is None:
             return None
 
         return UserData(
             user_id=data[0],
             money=data[1],
-            lifttime_losses=data[2],
-            lifttime_wins=data[3],
-            lifttime_profit=data[4],
-            joined_table=data[5],
-            joined_table_name=data[6],
+            temp_money=data[2],
+            lifttime_losses=data[3],
+            lifttime_wins=data[4],
+            lifttime_profit=data[5],
+            joined_table=data[6],
+            joined_table_name=data[7],
         )
 
 
